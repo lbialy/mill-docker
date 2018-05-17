@@ -1,7 +1,10 @@
 language: scala
+
 script:
+
   # install mill
   - curl -L -o ~/bin/mill https://github.com/lihaoyi/mill/releases/download/0.2.0/0.2.0 && chmod +x ~/bin/mill
   - export PATH=~/bin/mill:$PATH
+
   # run tests
-  - mill resolve __
+  - mill all _.test
