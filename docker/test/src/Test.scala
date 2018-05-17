@@ -19,6 +19,7 @@ class Test extends FreeSpec with MillTest {
 
     }
 
+    rm(imagetest.millSourcePath)
     mkdir(imagetest.millSourcePath)
     val docker = DockerCli(imagetest.millSourcePath)
 
