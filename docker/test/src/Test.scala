@@ -9,10 +9,14 @@ class Test extends FreeSpec with MillTest {
   "A DockerModule image" - {
 
     object imagetest extends AutoModule with DockerModule {
-      override def dockerImageName = "imagetest"
-      override def dockerImageTag  = Some("test")
+      val name  = "imagetest"
+      val tag   = "test"
+      val alias = s"$name:$tag"
+
+      override def dockerImageName = name
+      override def dockerImageTag  = Some(tag)
       override def dockerContext   = Map[Path, String]()
-      override def dockerCommands  = """
+      override def dockerFile      = """
         FROM alpine
         CMD echo "hi"
       """
@@ -25,18 +29,18 @@ class Test extends FreeSpec with MillTest {
 
     "should be built" in {
 
-      docker.rmi(imagetest.dockerImageAlias)
-      assert(!docker.present(imagetest.dockerImageAlias))
+      docker.rmi(imagetest.alias)
+      assert(!docker.present(imagetest.alias))
 
       load(imagetest).eval(imagetest.dockerBuild)
-      assert(docker.present(imagetest.dockerImageAlias))
+      assert(docker.present(imagetest.alias))
 
     }
 
     "should be runnable" in {
 
       load(imagetest).eval(imagetest.dockerBuild)
-      assert(docker.run(imagetest.dockerImageAlias).out.trim == "hi")
+      assert(docker.run(imagetest.alias).out.trim == "hi")
 
     }
   }

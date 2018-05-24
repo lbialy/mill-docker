@@ -1,37 +1,38 @@
 package com.github.tobiasjohansson
 
+import ammonite.ops._
+
 import mill._
 import mill.scalalib._
+import mill.define.{Target => T, Command => C, _}
 
 trait DockerModule extends Module {
 
-  import ammonite.ops._
-  import mill.define._
+  def dockerImageName: T[String]
+  def dockerFile:      T[String]
 
-  def dockerImageName: String
-  def dockerImageTag: Option[String]        = None
-  def dockerImageRepository: Option[String] = None
+  def dockerImageTag:        T[Option[String]] = None
+  def dockerImageRepository: T[Option[String]] = None
 
-  def dockerImageAlias: String =
-    dockerImageRepository.fold("")(_ + "/") + dockerImageName + dockerImageTag.fold("")(":" + _)
+  def dockerImageAlias: T[String] = T {
+    dockerImageRepository().fold("")(_ + "/") + dockerImageName() + dockerImageTag().fold("")(
+      ":" + _)
+  }
 
-  def dockerBuildCommandArgs: Seq[String] = Seq("-q", "-t", dockerImageAlias)
+  def dockerBuildCommandArgs: T[Seq[String]] =
+    T { Seq("-q", "-t", dockerImageAlias()) }
 
-  def dockerBuildCommand: Seq[String] =
-    Seq(
-      Seq("docker", "build"),
-      dockerBuildCommandArgs,
-      Seq(".")
-    ).flatten
+  def dockerBuildCommand: T[Seq[String]] =
+    T { Seq(Seq("docker", "build"), dockerBuildCommandArgs(), Seq(".")).flatten }
 
-  def dockerContext: Target[Map[Path, String]]
-  def dockerCommands: Target[String]
+  def dockerContext: T[Map[Path, String]] =
+    T { Map[Path, String]() }
 
-  def dockerBuild: Target[String] = T {
+  def dockerBuild: T[String] = T {
 
     implicit val wd = T.ctx().dest
 
-    write(wd / 'Dockerfile, dockerCommands())
+    write(wd / 'Dockerfile, dockerFile())
 
     for ((src, trg) <- dockerContext()) {
       val dst = wd / RelPath(trg)
@@ -39,10 +40,10 @@ trait DockerModule extends Module {
       cp(src, dst)
     }
 
-    %%(dockerBuildCommand).out.string.trim
+    %%(dockerBuildCommand()).out.string.trim
   }
 
-  def dockerRun() = T.command {
+  def dockerRun(): C[Unit] = T.command {
     implicit val wd = T.ctx().dest
     print(%%("docker", "run", "--rm", dockerBuild()).out.string)
   }
@@ -51,31 +52,25 @@ trait DockerModule extends Module {
 trait ScalaDockerModule extends DockerModule {
   this: ScalaModule =>
 
-  def dockerFrom: String       = "openjdk:8-slim"
-  def dockerMaintainer: String = ""
+  def dockerImageName:  T[String]      = T { artifactId() }
+  def dockerFrom:       T[String]      = T { "openjdk:8-slim" }
+  def dockerMaintainer: T[String]      = T { "" }
+  def dockerCmd:        T[Seq[String]] = T { Seq("java", "-jar", "assembly.jar") }
 
-  def dockerCmd: Seq[String] = Seq(
-    "java",
-    "-jar",
-    "assembly.jar"
-  )
-
-  def dockerContext = T {
-    Map(
-      assembly().path -> "assembly.jar"
-    )
+  override def dockerContext: T[Map[Path, String]] = T {
+    Map(assembly().path -> s"${artifactId()}.jar")
   }
 
-  def dockerCommands = T {
+  def dockerFile: T[String] = T {
     s"""
-    FROM ${dockerFrom}
-    LABEL maintainer="${dockerMaintainer}"
+    FROM ${dockerFrom()}
+    LABEL maintainer="${dockerMaintainer()}"
 
     ${dockerContext().values
       .map(v => s"COPY $v $v")
       .mkString("\n")}
 
-    CMD ${dockerCmd.mkString(" ")}
+    CMD ${dockerCmd().mkString(" ")}
   """
   }
 }
