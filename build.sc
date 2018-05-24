@@ -20,7 +20,7 @@ object docker extends ScalaModule with PublishModule {
     licenses   = Seq(),
   )
   def compileIvyDeps = Agg(
-    ivy"com.lihaoyi::mill-dev:0.2.2"
+    ivy"com.lihaoyi::mill-dev:0.2.2",
   )
 
   object test extends Tests {
@@ -28,7 +28,8 @@ object docker extends ScalaModule with PublishModule {
     override def moduleDeps   = Seq(docker)
     override def ivyDeps = Agg(
       ivy"org.scalatest::scalatest:3.0.4",
-      ivy"com.lihaoyi::sourcecode:0.1.4"
+      ivy"com.lihaoyi::sourcecode:0.1.4",
+      ivy"com.lihaoyi::mill-dev:0.2.2",
     )
     def testFrameworks = Seq("org.scalatest.tools.Framework")
   }
